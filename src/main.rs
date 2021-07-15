@@ -1,19 +1,25 @@
-use std::io::prelude::*;
+use native_tls::TlsConnector;
+use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::str;
 
 fn main() -> std::io::Result<()> {
+    let tlsconn = TlsConnector::new().unwrap();
+
     let mut stream =
-        TcpStream::connect("www.google.com:80").expect("Unable to connect to the server");
+        TcpStream::connect("www.google.com:443").expect("Unable to connect to the server");
+
+    let mut tlsstream = tlsconn
+        .connect("google.com", stream)
+        .expect("Can't create TLS connection");
 
     let request = String::from("GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n");
 
-    let mut response: [u8; 4096] = [0; 4096];
+    let mut response = vec![];
 
-    stream.write(request.as_bytes())?;
-    stream.read(&mut response)?;
+    tlsstream.write_all(request.as_bytes())?;
+    tlsstream.read_to_end(&mut response).unwrap();
 
-    println!("{}", str::from_utf8(&response).unwrap());
+    println!("{}", String::from_utf8_lossy(&response));
 
     Ok(())
 }
